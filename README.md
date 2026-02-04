@@ -11,6 +11,7 @@ Language switch:
 ---
 
 ## About
+<img width="482" height="403" alt="image" src="https://github.com/user-attachments/assets/2eabe594-98f5-46f9-9f33-b9d8975f6bd4" />
 
 ehiniumNetProbe is a lightweight network diagnostic tool focused on testing real connectivity between two servers.
 
