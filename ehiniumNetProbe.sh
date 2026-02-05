@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-VERSION="0.3.0"
+VERSION="0.3.1"
 
 # -----------------------------
 # Styling
@@ -56,6 +56,7 @@ IPERF_UDP_BW="15M"
 # Server-side iperf3 watchdog timeout (seconds).
 # Default: slightly longer than client iperf timeout (IPERF_TIME + 15)
 SERVER_IPERF_TIMEOUT=$((IPERF_TIME + 15))
+IPERF_REVERSE=0    # 0 = normal (default), 1 = reverse (-R)
 
 SOAK_LOOPS=20
 SOAK_INTERVAL=0.10
@@ -398,6 +399,13 @@ parse_hosts_csv() {
 # Parameters display
 # -----------------------------
 show_params() {
+  local rev_label
+  if [[ "${IPERF_REVERSE:-0}" -eq 1 ]]; then
+    rev_label="yes"
+  else
+    rev_label="no"
+  fi
+
   printf "\n%s\n" "${C_DIM}Parameters:${C_RESET}"
   printf "%s\n" "${C_DIM}- host: ${HOST:-n/a}${C_RESET}"
   printf "%s\n" "${C_DIM}- sni:  ${SNI:-none}${C_RESET}"
@@ -405,6 +413,7 @@ show_params() {
   printf "%s\n" "${C_DIM}- ping:  count=$PING_COUNT timeout=${PING_TIMEOUT}s${C_RESET}"
   printf "%s\n" "${C_DIM}- tcp connect: tries=$TCP_CONNECT_TRIES timeout=${TCP_CONNECT_TIMEOUT}s${C_RESET}"
   printf "%s\n" "${C_DIM}- iperf3: time=${IPERF_TIME}s parallel=$IPERF_PARALLEL udp_bw=$IPERF_UDP_BW${C_RESET}"
+  printf "%s\n" "${C_DIM}- iperf3 reverse: ${rev_label}${C_RESET}"
   printf "%s\n" "${C_DIM}- iperf3 server: timeout=${SERVER_IPERF_TIMEOUT}s${C_RESET}"
   printf "%s\n" "${C_DIM}- soak: loops=$SOAK_LOOPS interval=${SOAK_INTERVAL}s timeout=${SOAK_TIMEOUT}s${C_RESET}"
 }
@@ -786,9 +795,11 @@ test_iperf_tcp() {
   local rc=0
   local used_fallback=""
   local timeout_s=$((IPERF_TIME + 10))
+   local rev_arg=()
+   [[ "${IPERF_REVERSE:-0}" -eq 1 ]] && rev_arg=(-R)
 
   # Attempt 1: use configured parallel
-  if run_with_spinner "iperf3_tcp" timeout "$timeout_s" iperf3 -c "$HOST" -p "$IPERF_PORT" -t "$IPERF_TIME" -P "$IPERF_PARALLEL"; then
+  if run_with_spinner "iperf3_tcp" timeout "$timeout_s" iperf3 -c "$HOST" -p "$IPERF_PORT" -t "$IPERF_TIME" -P "$IPERF_PARALLEL" "${rev_arg[@]}"; then
     rc=0
   else
     rc=$?
@@ -797,7 +808,7 @@ test_iperf_tcp() {
   # If failed and parallel is not 1, retry once with P=1
   if [[ "$rc" -ne 0 && "${IPERF_PARALLEL:-1}" -ne 1 ]]; then
     used_fallback="fallback P=1"
-    if run_with_spinner "iperf3_tcp" timeout "$timeout_s" iperf3 -c "$HOST" -p "$IPERF_PORT" -t "$IPERF_TIME" -P 1; then
+    if run_with_spinner "iperf3_tcp" timeout "$timeout_s" iperf3 -c "$HOST" -p "$IPERF_PORT" -t "$IPERF_TIME" -P 1 "${rev_arg[@]}"; then
       rc=0
     else
       rc=$?
@@ -865,10 +876,12 @@ test_iperf_udp() {
   local msg=""
   local used_fallback=""
   local timeout_s=$((IPERF_TIME + 10))
+  local rev_arg=()
+  [[ "${IPERF_REVERSE:-0}" -eq 1 ]] && rev_arg=(-R)
 
   local attempt backoff
   for attempt in 1 2 3 4; do
-    if run_with_spinner "iperf3_udp" timeout "$timeout_s" iperf3 -u -c "$HOST" -p "$IPERF_PORT" -t "$IPERF_TIME" -b "$IPERF_UDP_BW"; then
+    if run_with_spinner "iperf3_udp" timeout "$timeout_s" iperf3 -u -c "$HOST" -p "$IPERF_PORT" -t "$IPERF_TIME" -b "$IPERF_UDP_BW" "${rev_arg[@]}"; then
       rc=0
     else
       rc=$?
@@ -889,7 +902,7 @@ test_iperf_udp() {
   # If still failed (and not busy), retry once with low bandwidth
   if [[ "$rc" -ne 0 ]] && ! is_iperf_busy "$msg" && [[ "${IPERF_UDP_BW:-}" != "1M" ]]; then
     used_fallback="fallback bw=1M"
-    if run_with_spinner "iperf3_udp" timeout "$timeout_s" iperf3 -u -c "$HOST" -p "$IPERF_PORT" -t "$IPERF_TIME" -b 1M; then
+    if run_with_spinner "iperf3_udp" timeout "$timeout_s" iperf3 -u -c "$HOST" -p "$IPERF_PORT" -t "$IPERF_TIME" -b 1M "${rev_arg[@]}"; then
       rc=0
       msg=""
     else
@@ -1155,8 +1168,26 @@ wizard_loop() {
         done
       fi
 
-      prompt_line_default "SNI (optional, press Enter to skip): " ""
-      SNI="$PROMPT_VALUE"
+      # SNI is only relevant for TLS tests; skip for pure throughput.
+      if [[ "$SUITE" != "throughput" ]]; then
+        prompt_line_default "SNI (optional, press Enter to skip): " ""
+        SNI="$PROMPT_VALUE"
+      else
+        SNI=""
+      fi
+
+      # iperf3 reverse (-R) only makes sense when suites include iperf3 tests.
+      if [[ "$SUITE" == "express" || "$SUITE" == "throughput" || "$SUITE" == "custom" ]]; then
+        printf "iperf3 reverse direction (-R)? [y/N]: "
+        local ans
+        IFS= read -r ans || true
+        case "$ans" in
+          y|Y) IPERF_REVERSE=1 ;;
+          *)   IPERF_REVERSE=0 ;;
+        esac
+      else
+        IPERF_REVERSE=0
+      fi
     fi
 
     if [[ "$SUITE" == "custom" ]]; then
@@ -1203,8 +1234,8 @@ Usage:
   $0                (interactive)
   $0 --interactive  (interactive)
 
-  $0 server --suite baseline|throughput|soak|express|custom
-  $0 client --suite baseline|throughput|soak|express|custom --host <ip|domain> [--sni <name>]
+  $0 server --suite baseline|throughput|soak|express|custom [--iperf-server-timeout <sec>]
+  $0 client --suite baseline|throughput|soak|express|custom --host <ip|domain> [--sni <name>] [--iperf-reverse]
 
 Custom-only:
   --format terminal|markdown
@@ -1230,6 +1261,7 @@ parse_args() {
       --suite) SUITE="${2:-}"; shift 2 ;;
       --host) HOST="${2:-}"; shift 2 ;;
       --sni)  SNI="${2:-}"; shift 2 ;;
+      --iperf-reverse|--reverse) IPERF_REVERSE=1; shift ;;
       --iperf-server-timeout) SERVER_IPERF_TIMEOUT="${2:-}"; shift 2 ;;
       --format) OUTPUT_FORMAT="${2:-terminal}"; shift 2 ;;
       --tsv) TSV_OUT="${2:-}"; shift 2 ;;
