@@ -1023,7 +1023,7 @@ test_iperf_tcp() {
 		local rx=""
 		[[ -f "${RUN_OUT_FILE:-}" ]] && rx=$(parse_iperf_receiver "$RUN_OUT_FILE" 2>/dev/null || true)
 		if [[ -z "$rx" ]]; then
-			add_row "iperf3_tcp" "$(bad)" "receiver line missing"
+			add_row "iperf3_tcp" "$(bad)" "TCP connected, but no data transferred"
 			return
 		fi
 
@@ -1054,7 +1054,7 @@ test_iperf_tcp() {
 			rx=""
 			[[ -f "${RUN_OUT_FILE:-}" ]] && rx=$(parse_iperf_receiver "$RUN_OUT_FILE" 2>/dev/null || true)
 			[[ -n "$rx" ]] || {
-				add_row "iperf3_tcp" "$(bad)" "receiver line missing ($used_fallback)"
+				add_row "iperf3_tcp" "$(bad)" "TCP connected, but no data transferred ($used_fallback)"
 				return
 			}
 			val=$(awk '{print $1}' <<<"$rx")
