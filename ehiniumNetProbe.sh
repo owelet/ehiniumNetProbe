@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-VERSION="0.4.1"
+VERSION="0.4.2"
 
 # -----------------------------
 # Styling
@@ -185,35 +185,35 @@ get_next_iperf_port() {
 }
 
 print_metadata_info() {
-  have curl || return 0
+	have curl || return 0
 
-  local qip=""
-  if [[ -n "${HOST:-}" ]]; then
-    qip="$HOST"
-  else
-    qip="$(hostname -I 2>/dev/null | awk '{print $1}' | tr -d '\r\n' || true)"
-  fi
-  [[ -n "$qip" ]] || return 0
+	local qip=""
+	if [[ -n "${HOST:-}" ]]; then
+		qip="$HOST"
+	else
+		qip="$(hostname -I 2>/dev/null | awk '{print $1}' | tr -d '\r\n' || true)"
+	fi
+	[[ -n "$qip" ]] || return 0
 
-  local resp country isp
-  resp="$(curl -fsS --max-time 3 "http://ipwhois.app/json/${qip}" 2>/dev/null || true)"
-  [[ -n "$resp" ]] || return 0
+	local resp country isp
+	resp="$(curl -fsS --max-time 3 "http://ipwhois.app/json/${qip}" 2>/dev/null || true)"
+	[[ -n "$resp" ]] || return 0
 
-  if have jq; then
-    country="$(printf '%s' "$resp" | jq -r '.country // empty' 2>/dev/null || true)"
-    isp="$(printf '%s' "$resp" | jq -r '.isp // empty' 2>/dev/null || true)"
-  else
-    country="$(printf '%s\n' "$resp" | sed -n 's/.*"country"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
-    isp="$(printf '%s\n' "$resp" | sed -n 's/.*"isp"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
-  fi
+	if have jq; then
+		country="$(printf '%s' "$resp" | jq -r '.country // empty' 2>/dev/null || true)"
+		isp="$(printf '%s' "$resp" | jq -r '.isp // empty' 2>/dev/null || true)"
+	else
+		country="$(printf '%s\n' "$resp" | sed -n 's/.*"country"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
+		isp="$(printf '%s\n' "$resp" | sed -n 's/.*"isp"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
+	fi
 
-  [[ -n "$country$isp" ]] || return 0
-  printf "\n"
-  printf "%s\n" "${C_DIM}┌─ Node info ─────────────────────────────────────────────${C_RESET}"
-  printf "%s\n" "${C_DIM}│ Server IP : ${qip}${C_RESET}"
-  [[ -n "$country" ]] && printf "%s\n" "${C_DIM}│ Location  : ${country}${C_RESET}"
-  [[ -n "$isp" ]] && printf "%s\n" "${C_DIM}│ Datacenter: ${isp}${C_RESET}"
-  printf "%s\n" "${C_DIM}└────────────────────────────────────────────────────────${C_RESET}"
+	[[ -n "$country$isp" ]] || return 0
+	printf "\n"
+	printf "%s\n" "${C_DIM}┌─ Node info ─────────────────────────────────────────────${C_RESET}"
+	printf "%s\n" "${C_DIM}│ Server IP : ${qip}${C_RESET}"
+	[[ -n "$country" ]] && printf "%s\n" "${C_DIM}│ Location  : ${country}${C_RESET}"
+	[[ -n "$isp" ]] && printf "%s\n" "${C_DIM}│ Datacenter: ${isp}${C_RESET}"
+	printf "%s\n" "${C_DIM}└────────────────────────────────────────────────────────${C_RESET}"
 }
 
 translate_missing() {
@@ -283,7 +283,7 @@ classify_net_err() {
 		return
 	fi
 
-		if [[ "$s" == *"segmentation fault"* ]] || [[ "$s" == *"sigsegv"* ]]; then
+	if [[ "$s" == *"segmentation fault"* ]] || [[ "$s" == *"sigsegv"* ]]; then
 		echo "CRASH"
 		return
 	fi
@@ -1205,12 +1205,19 @@ test_iperf_udp() {
 		fi
 
 		local d="$rate, loss $loss, jitter $jitter${used_fallback:+ ($used_fallback)}"
-		if awk -v p="$pct" 'BEGIN{exit !(p<=1.0)}'; then
+
+		# Throughput-based WARN for UDP (non-zero but very low rate)
+		local ukbps
+		ukbps="$(to_kbits "$(awk '{print $1}' <<<"$rate")" "$(awk '{print $2}' <<<"$rate")" || true)"
+
+		# UDP policy:
+		# - PASS only if loss <= 1% AND rate >= 1 Mbps
+		# - WARN for any loss > 1% OR rate < 1 Mbps (but non-zero)
+		# - FAIL is reserved for hard failures handled earlier (no traffic, missing summary after retries, etc.)
+		if awk -v p="$pct" 'BEGIN{exit !(p<=1.0)}' && [[ -n "$ukbps" ]] && awk -v k="$ukbps" 'BEGIN{exit !(k>=1000)}'; then
 			add_row "iperf3_udp" "$(ok)" "$d"
-		elif awk -v p="$pct" 'BEGIN{exit !(p<=3.0)}'; then
-			add_row "iperf3_udp" "$(warn)" "$d"
 		else
-			add_row "iperf3_udp" "$(bad)" "$d"
+			add_row "iperf3_udp" "$(warn)" "$d"
 		fi
 		return
 	done
