@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-VERSION="0.4.0"
+VERSION="0.4.1"
 
 # -----------------------------
 # Styling
@@ -280,6 +280,11 @@ classify_net_err() {
 
 	if [[ "$s" == *"unable to send control message"* ]] || [[ "$s" == *"control socket"* ]]; then
 		echo "IPERF_CONTROL"
+		return
+	fi
+
+		if [[ "$s" == *"segmentation fault"* ]] || [[ "$s" == *"sigsegv"* ]]; then
+		echo "CRASH"
 		return
 	fi
 
@@ -960,7 +965,7 @@ run_iperf_client_on_port() {
 is_iperf_rotatable_err() {
 	local code="$1"
 	case "$code" in
-	CONN_REFUSED | TIMEOUT | IPERF_BUSY | IPERF_CONTROL) return 0 ;;
+	CONN_REFUSED | TIMEOUT | IPERF_BUSY | IPERF_CONTROL | CRASH) return 0 ;;
 	*) return 1 ;;
 	esac
 }
@@ -1022,13 +1027,15 @@ test_iperf_tcp() {
 
 		local rx=""
 		[[ -f "${RUN_OUT_FILE:-}" ]] && rx=$(parse_iperf_receiver "$RUN_OUT_FILE" 2>/dev/null || true)
-		if [[ -z "$rx" ]]; then
-			add_row "iperf3_tcp" "$(bad)" "TCP connected, but no data transferred"
-			return
-		fi
 
-		val=$(awk '{print $1}' <<<"$rx")
-		unit=$(awk '{print $2}' <<<"$rx")
+		# If iperf produced no receiver summary, treat it like 0 throughput so fallback can run.
+		if [[ -z "$rx" ]]; then
+			val=0
+			unit="bits/sec"
+		else
+			val=$(awk '{print $1}' <<<"$rx")
+			unit=$(awk '{print $2}' <<<"$rx")
+		fi
 
 		if awk -v v="$val" 'BEGIN{exit !(v==0)}'; then
 			portinfo="$(get_next_iperf_port "$last_idx")" || {
@@ -1134,8 +1141,39 @@ test_iperf_udp() {
 		sum=""
 		[[ -f "${RUN_OUT_FILE:-}" ]] && sum=$(awk '/receiver/ && /%/ {print; exit}' "$RUN_OUT_FILE" 2>/dev/null || true)
 		if [[ -z "$sum" ]]; then
-			add_row "iperf3_udp" "$(bad)" "receiver summary missing${used_fallback:+ ($used_fallback)}"
-			return
+			# UDP test did not complete cleanly (no receiver summary). Try fallback bw once, otherwise rotate port.
+			if [[ -z "$used_fallback" && "${IPERF_UDP_BW:-}" != "${IPERF_UDP_FALLBACK_BW:-}" ]]; then
+				used_fallback="fallback bw=${IPERF_UDP_FALLBACK_BW}"
+
+				if run_iperf_client_on_port "iperf3_udp" "$timeout_s" "$port" -u -t "$IPERF_UDP_TIME" -b "$IPERF_UDP_FALLBACK_BW" "${rev_arg[@]}"; then
+					rc=0
+				else
+					rc=$?
+				fi
+
+				if [[ "$rc" -ne 0 ]]; then
+					if [[ "$rc" -eq 124 ]]; then
+						continue
+					fi
+					raw="$(extract_iperf_errline "${RUN_ERR_FILE:-}" "${RUN_OUT_FILE:-}")"
+					norm="$(normalize_err_line "$raw")"
+					code="$(classify_net_err "$norm")"
+					if is_iperf_rotatable_err "$code"; then
+						continue
+					fi
+					msg="$(pretty_err "${raw:-iperf3 failed (rc=$rc)}")"
+					add_row "iperf3_udp" "$(bad)" "$msg ($used_fallback)"
+					return
+				fi
+
+				# Re-parse after fallback run
+				sum=""
+				[[ -f "${RUN_OUT_FILE:-}" ]] && sum=$(awk '/receiver/ && /%/ {print; exit}' "$RUN_OUT_FILE" 2>/dev/null || true)
+				[[ -n "$sum" ]] || continue
+			else
+				# No fallback available (or already used), rotate port
+				continue
+			fi
 		fi
 
 		local rate jitter loss pct
@@ -1177,7 +1215,7 @@ test_iperf_udp() {
 		return
 	done
 
-	add_row "iperf3_udp" "$(bad)" "all iperf3 ports failed"
+	add_row "iperf3_udp" "$(bad)" "UDP test did not complete"
 }
 
 soak_progress_line() {
