@@ -185,41 +185,35 @@ get_next_iperf_port() {
 }
 
 print_metadata_info() {
-	have curl || return 0
+  have curl || return 0
 
-	local resp server_ip city region country org asn network
-	resp="$(curl -fsS --connect-timeout 1 --max-time 2 https://ipinfo.io/json 2>/dev/null || true)"
-	[[ -n "$resp" ]] || return 0
+  local qip=""
+  if [[ -n "${HOST:-}" ]]; then
+    qip="$HOST"
+  else
+    qip="$(hostname -I 2>/dev/null | awk '{print $1}' | tr -d '\r\n' || true)"
+  fi
+  [[ -n "$qip" ]] || return 0
 
-	if have jq; then
-		server_ip="$(printf '%s' "$resp" | jq -r '.ip // empty' 2>/dev/null || true)"
-		city="$(printf '%s' "$resp" | jq -r '.city // empty' 2>/dev/null || true)"
-		region="$(printf '%s' "$resp" | jq -r '.region // empty' 2>/dev/null || true)"
-		country="$(printf '%s' "$resp" | jq -r '.country // empty' 2>/dev/null || true)"
-		org="$(printf '%s' "$resp" | jq -r '.org // empty' 2>/dev/null || true)"
-	else
-		server_ip="$(printf '%s\n' "$resp" | sed -n 's/.*"ip"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
-		city="$(printf '%s\n' "$resp" | sed -n 's/.*"city"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
-		region="$(printf '%s\n' "$resp" | sed -n 's/.*"region"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
-		country="$(printf '%s\n' "$resp" | sed -n 's/.*"country"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
-		org="$(printf '%s\n' "$resp" | sed -n 's/.*"org"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
-	fi
+  local resp country isp
+  resp="$(curl -fsS --max-time 3 "http://ipwhois.app/json/${qip}" 2>/dev/null || true)"
+  [[ -n "$resp" ]] || return 0
 
-	[[ -n "$server_ip$city$region$country$org" ]] || return 0
+  if have jq; then
+    country="$(printf '%s' "$resp" | jq -r '.country // empty' 2>/dev/null || true)"
+    isp="$(printf '%s' "$resp" | jq -r '.isp // empty' 2>/dev/null || true)"
+  else
+    country="$(printf '%s\n' "$resp" | sed -n 's/.*"country"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
+    isp="$(printf '%s\n' "$resp" | sed -n 's/.*"isp"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
+  fi
 
-	asn="${org%% *}"
-	network="${org#* }"
-	[[ "$network" == "$org" ]] && network=""
-
-	printf "%s\n" "${C_DIM}┌─ Node info ─────────────────────────────────────────────${C_RESET}"
-	[[ -n "$server_ip" ]] && printf "%s\n" "${C_DIM}│ Server IP : ${server_ip}${C_RESET}"
-	if [[ -n "$city$region$country" ]]; then
-		printf "%s\n" "${C_DIM}│ Location  : ${city}${city:+, }${region}${region:+, }${country}${C_RESET}"
-	fi
-	if [[ -n "$org" ]]; then
-		printf "%s\n" "${C_DIM}│ Network   : ${network:-$org}${asn:+ (}$asn${asn:+)}${C_RESET}"
-	fi
-	printf "%s\n" "${C_DIM}└────────────────────────────────────────────────────────${C_RESET}"
+  [[ -n "$country$isp" ]] || return 0
+  printf "\n"
+  printf "%s\n" "${C_DIM}┌─ Node info ─────────────────────────────────────────────${C_RESET}"
+  printf "%s\n" "${C_DIM}│ Server IP : ${qip}${C_RESET}"
+  [[ -n "$country" ]] && printf "%s\n" "${C_DIM}│ Location  : ${country}${C_RESET}"
+  [[ -n "$isp" ]] && printf "%s\n" "${C_DIM}│ Datacenter: ${isp}${C_RESET}"
+  printf "%s\n" "${C_DIM}└────────────────────────────────────────────────────────${C_RESET}"
 }
 
 translate_missing() {
@@ -487,6 +481,7 @@ prompt_choice() {
 		for ((i = 0; i < ${#options[@]}; i++)); do
 			printf "  %d. %s\n" $((i + 1)) "${options[i]}"
 		done
+		printf "\n"
 		printf "Enter number: "
 		local input
 		IFS= read -r input || true
@@ -1334,6 +1329,7 @@ EOF
 	printf "%s\n" "Version ${C_YELLOW}${VERSION}${C_RESET}"
 	printf "%s\n" "Github ${C_YELLOW}github.com/ehinium/ehiniumNetProbe${C_RESET}"
 	printf "%s\n" "By Ehsan ${C_YELLOW}@ehinium${C_RESET}"
+
 	print_metadata_info
 }
 
